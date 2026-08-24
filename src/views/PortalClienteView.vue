@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { siteConfig } from '../config/siteConfig'
+// Dejar el script vacío si no requerimos variables locales
 </script>
 
 <template>
