@@ -301,11 +301,6 @@ function copiarCodigo() {
   setTimeout(() => { copiadoExito.value = false }, 2500)
 }
 
-function irAWhatsApp() {
-  window.open(ordenCreadaUrlWa.value, '_blank')
-  ordenCreadaModal.value = false
-}
-
 function handleFileUpload(e: Event) {
   const target = e.target as HTMLInputElement
   if (target.files && target.files[0]) {
@@ -490,69 +485,69 @@ function handleFileUpload(e: Event) {
     </div>
 
     <!-- Modal Checkout -->
-<div v-if="checkoutOpen" class="modal-backdrop" @click.self="checkoutOpen = false">
-  <div class="checkout-card">
-    <h2>Confirmación y Entrega</h2>
-    <p class="subtitle">Ingresa tus datos para procesar el despacho</p>
+    <div v-if="checkoutOpen" class="modal-backdrop" @click.self="checkoutOpen = false">
+      <div class="checkout-card">
+        <h2>Confirmación y Entrega</h2>
+        <p class="subtitle">Ingresa tus datos para procesar el despacho</p>
 
-    <form @submit.prevent="procesarPedido" class="checkout-form">
-      <div class="form-group">
-        <label>Nombre Completo *</label>
-        <input type="text" v-model="datosCliente.nombre" required placeholder="Ej. Juan Pérez" />
+        <form @submit.prevent="procesarPedido" class="checkout-form">
+          <div class="form-group">
+            <label>Nombre Completo *</label>
+            <input type="text" v-model="datosCliente.nombre" required placeholder="Ej. Juan Pérez" />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Teléfono WhatsApp *</label>
+              <input type="tel" v-model="datosCliente.telefono" required placeholder="Ej. 55554444" />
+            </div>
+            <div class="form-group">
+              <label>Correo Electrónico *</label>
+              <input type="email" v-model="datosCliente.email" required placeholder="cliente@correo.com" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Dirección Exacta de Entrega *</label>
+            <input type="text" v-model="datosCliente.direccion" required placeholder="Calle, avenida, zona, número de casa" />
+          </div>
+
+          <div class="form-group">
+            <label>Método de Pago *</label>
+            <div class="payment-options">
+              <label :class="{ active: metodoPago === 'contra_entrega' }">
+                <input type="radio" value="contra_entrega" v-model="metodoPago" />
+                💵 Pago Contra Entrega
+              </label>
+              <label :class="{ active: metodoPago === 'transferencia' }">
+                <input type="radio" value="transferencia" v-model="metodoPago" />
+                🏦 Transferencia / Depósito
+              </label>
+            </div>
+          </div>
+
+          <div v-if="metodoPago === 'transferencia'" class="bank-details-box">
+            <p><strong>Cuentas Bancarias para Depósito:</strong></p>
+            <small>Banrural Monetaria: 3000-123456-7 (BytecodeGt)</small><br>
+            <small>BI Monetaria: 001-987654-2 (BytecodeGt)</small>
+
+            <div class="form-group mt-2">
+              <label>Adjuntar Comprobante (Imagen/PDF)</label>
+              <input type="file" @change="handleFileUpload" accept="image/*,application/pdf" />
+            </div>
+          </div>
+
+          <div class="checkout-actions">
+            <button type="button" @click="checkoutOpen = false" class="btn-cancel">Cancelar</button>
+            <button type="submit" class="btn-confirm" :disabled="procesandoOrden">
+              {{ procesandoOrden ? 'Procesando...' : 'Confirmar Orden por WhatsApp 🚀' }}
+            </button>
+          </div>
+        </form>
       </div>
+    </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label>Teléfono WhatsApp *</label>
-          <input type="tel" v-model="datosCliente.telefono" required placeholder="Ej. 55554444" />
-        </div>
-        <div class="form-group">
-          <label>Correo Electrónico *</label>
-          <input type="email" v-model="datosCliente.email" required placeholder="cliente@correo.com" />
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label>Dirección Exacta de Entrega *</label>
-        <input type="text" v-model="datosCliente.direccion" required placeholder="Calle, avenida, zona, número de casa" />
-      </div>
-
-      <div class="form-group">
-        <label>Método de Pago *</label>
-        <div class="payment-options">
-          <label :class="{ active: metodoPago === 'contra_entrega' }">
-            <input type="radio" value="contra_entrega" v-model="metodoPago" />
-            💵 Pago Contra Entrega
-          </label>
-          <label :class="{ active: metodoPago === 'transferencia' }">
-            <input type="radio" value="transferencia" v-model="metodoPago" />
-            🏦 Transferencia / Depósito
-          </label>
-        </div>
-      </div>
-
-      <div v-if="metodoPago === 'transferencia'" class="bank-details-box">
-        <p><strong>Cuentas Bancarias para Depósito:</strong></p>
-        <small>Banrural Monetaria: 3000-123456-7 (BytecodeGt)</small><br>
-        <small>BI Monetaria: 001-987654-2 (BytecodeGt)</small>
-
-        <div class="form-group mt-2">
-          <label>Adjuntar Comprobante (Imagen/PDF)</label>
-          <input type="file" @change="handleFileUpload" accept="image/*,application/pdf" />
-        </div>
-      </div>
-
-      <div class="checkout-actions">
-        <button type="button" @click="checkoutOpen = false" class="btn-cancel">Cancelar</button>
-        <button type="submit" class="btn-confirm" :disabled="procesandoOrden">
-          {{ procesandoOrden ? 'Procesando...' : 'Confirmar Orden por WhatsApp 🚀' }}
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
-
-    <!-- Modal Confirmación de Orden Creada + Copiar Código (Mejora 3) -->
+    <!-- Modal Confirmación de Orden Creada + Copiar Código -->
     <div v-if="ordenCreadaModal" class="modal-backdrop">
       <div class="order-success-card">
         <div class="success-icon-badge">🎉</div>
@@ -567,13 +562,19 @@ function handleFileUpload(e: Event) {
         </div>
 
         <div class="success-actions">
-          <button @click="irAWhatsApp" class="btn-wa-final">
+          <a 
+            :href="ordenCreadaUrlWa" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            class="btn-wa-final"
+            @click="ordenCreadaModal = false"
+          >
             💬 Continuar por WhatsApp 🚀
-          </button>
+          </a>
         </div>
       </div>
     </div>
-  </div>
+  </div> 
 </template>
 
 <style scoped>
