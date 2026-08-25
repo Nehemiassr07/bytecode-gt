@@ -1,17 +1,27 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import DashboardView from '../views/DashboardView.vue'
-import ClientesView from '../views/ClientesView.vue'
-import ReportesView from '../views/ReportesView.vue'
-import PortalClienteView from '../views/PortalClienteView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/', name: 'dashboard', component: DashboardView },
-    { path: '/clientes', name: 'clientes', component: ClientesView },
-    { path: '/reportes', name: 'reportes', component: ReportesView },
-    { path: '/portal-cliente', name: 'portal-cliente', component: PortalClienteView }
-  ]
+    {
+      path: '/',
+      name: 'tienda',
+      component: () => import('../views/TiendaView.vue') // Catálogo General & Carrito
+    },
+    {
+      path: '/rastreo',
+      name: 'rastreo',
+      component: () => import('../views/RastreoView.vue') // Módulo de Tracking de Órdenes
+    },
+    {
+      path: '/admin',
+      name: 'admin',
+      component: () => import('../views/AdminView.vue') // Panel Administrativo (CRUD & Órdenes)
+    }
+  ],
+  scrollBehavior() {
+    return { top: 0 }
+  }
 })
 
 export default router

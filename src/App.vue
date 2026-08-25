@@ -1,80 +1,108 @@
 <script setup lang="ts">
-import { RouterLink, RouterView, useRoute } from 'vue-router'
+import { ref } from 'vue'
+import { RouterLink, RouterView, useRouter } from 'vue-router'
 import { siteConfig } from './config/siteConfig'
 
-const $route = useRoute()
+const router = useRouter()
+const showLoginModal = ref(false)
+const adminPassword = ref('')
+const loginError = ref('')
+
+function intentarAccesoAdmin() {
+  loginError.value = ''
+  if (adminPassword.value === 'bytecode2026') {
+    showLoginModal.value = false
+    adminPassword.value = ''
+    sessionStorage.setItem('bytecode_admin_auth', 'true')
+    router.push('/admin')
+  } else {
+    loginError.value = 'Contraseña incorrecta'
+  }
+}
 </script>
 
 <template>
-  <!-- Banner flotante Demo -->
-  <div class="demo-banner">
-    <div class="demo-content">
-      <span>👁️ Vista Previa: Plan <strong>Custom System</strong></span>
-      
-      <div class="demo-actions">
-        <a href="https://www.kerubixstudio.online#planes" class="demo-back-btn">
-          ← Ver otros planes
-        </a>
-        <a href="https://www.kerubixstudio.online#cotizador" class="demo-cta-btn">
-          ⚡ Solicitar Sistema
-        </a>
+  <div class="bytecode-app" :style="{ 
+    '--color-primario': siteConfig.colores.primario,
+    '--color-secundario': siteConfig.colores.secundario,
+    '--color-fucsia': siteConfig.colores.acentoFucsia
+  }">
+    <!-- Navegación Flotante Minimalista (Sin Barra Superior Oscura ni Línea Azul) -->
+    <nav class="top-floating-nav">
+      <RouterLink to="/" class="nav-pill-btn">🛍️ Catálogo</RouterLink>
+      <RouterLink to="/rastreo" class="nav-pill-btn">📦 Rastrear Pedido</RouterLink>
+    </nav>
+
+    <!-- Cuerpo Principal -->
+    <main class="content-body">
+      <RouterView />
+    </main>
+
+    <!-- Modal Admin Oculto -->
+    <div v-if="showLoginModal" class="modal-backdrop" @click.self="showLoginModal = false">
+      <div class="login-card">
+        <h3>🔒 Acceso Restringido</h3>
+        <p>Introduce la clave de administración de BytecodeGt:</p>
+
+        <form @submit.prevent="intentarAccesoAdmin">
+          <input 
+            type="password" 
+            v-model="adminPassword" 
+            placeholder="Contraseña de administrador" 
+            class="auth-input"
+            autofocus 
+          />
+          <p v-if="loginError" class="auth-error">{{ loginError }}</p>
+
+          <div class="modal-actions">
+            <button type="button" @click="showLoginModal = false" class="btn-cancel">Cancelar</button>
+            <button type="submit" class="btn-login">Ingresar</button>
+          </div>
+        </form>
       </div>
     </div>
-  </div>
 
-  <div class="dashboard-layout" :style="{ '--color-primario': siteConfig.colores.primario }">
-    <!-- Sidebar Lateral -->
-    <aside class="sidebar">
-      <div class="brand-box">
-        <span class="brand-logo">⚡</span>
-        <div>
-          <h2>{{ siteConfig.nombreEmpresa }}</h2>
-          <small>Panel de Control</small>
-        </div>
+    <!-- Widget Flotante WhatsApp -->
+    <a 
+      :href="`https://wa.me/${siteConfig.whatsapp}?text=Hola%20BytecodeGt,%20deseo%20asesor%C3%ADa%20técnica`" 
+      target="_blank" 
+      rel="noopener noreferrer" 
+      class="whatsapp-float-btn"
+      title="Asesoría Técnica WhatsApp"
+    >
+      💬
+    </a>
+
+    <!-- Footer General -->
+    <footer class="main-footer">
+      <div class="footer-container">
+        <p>
+          <span @click="showLoginModal = true" class="secret-trigger" title="Acceso Administrativo">© 2026 🔒</span>
+          <strong>BYTECODEGT</strong>. Cómputo, Redes & Video Vigilancia.
+        </p>
       </div>
-
-      <nav class="sidebar-nav">
-        <RouterLink to="/" class="nav-item">📊 Dashboard</RouterLink>
-        <RouterLink to="/clientes" class="nav-item">👥 Clientes & Pedidos</RouterLink>
-        <RouterLink to="/reportes" class="nav-item">📈 Analíticas</RouterLink>
-        <RouterLink to="/portal-cliente" class="nav-item">👤 Portal del Cliente</RouterLink>
-      </nav>
-
-      <div class="user-badge">
-        <div class="avatar">{{ $route.path === '/portal-cliente' ? 'USER' : 'ADMIN' }}</div>
-        <div class="user-info">
-          <p>{{ $route.path === '/portal-cliente' ? 'Carlos Gómez' : 'Demo Admin' }}</p>
-          <small>{{ $route.path === '/portal-cliente' ? 'carlos@cliente.demo' : 'admin@nexus.demo' }}</small>
-        </div>
-      </div>
-    </aside>
-
-    <!-- Contenido Principal -->
-    <div class="main-wrapper">
-      <header class="topbar">
-        <h3>{{ $route.path === '/portal-cliente' ? 'Portal del Cliente' : 'Panel Administrativo' }}</h3>
-        
-        <div class="topbar-actions">
-          <RouterLink to="/portal-cliente" class="btn-toggle-view" v-if="$route.path !== '/portal-cliente'">
-            👤 Vista Cliente
-          </RouterLink>
-          <RouterLink to="/" class="btn-toggle-view admin-mode" v-else>
-            ⚙️ Modo Admin
-          </RouterLink>
-
-          <span class="status-indicator">🟢 En Línea</span>
-        </div>
-      </header>
-
-      <main class="content-body">
-        <RouterView />
-      </main>
-    </div>
+    </footer>
   </div>
 </template>
 
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* Scrollbar Personalizada Neón Oscura */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #070A13;
+}
+::-webkit-scrollbar-thumb {
+  background: #1E293B;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-secundario, #00A3FF);
+}
 
 body {
   background-color: #070A13;
@@ -83,100 +111,104 @@ body {
   overflow-x: hidden;
 }
 
-.demo-banner {
-  background-color: #111827;
-  border-bottom: 1px solid var(--color-primario, #3B82F6);
-  padding: 0.5rem 1rem;
-  font-size: 0.8rem;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.demo-content {
-  max-width: 1300px;
-  margin: 0 auto;
+.bytecode-app {
+  min-height: 100vh;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  flex-direction: column;
+  position: relative;
 }
 
-.demo-content strong { color: var(--color-primario, #3B82F6); }
-
-.demo-actions {
+/* Botones de Navegación Flotantes (Sin barra bloqueante) */
+.top-floating-nav {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.5rem;
+  z-index: 100;
   display: flex;
   align-items: center;
   gap: 0.75rem;
 }
 
-.demo-back-btn {
-  color: #94A3B8;
+.nav-pill-btn {
+  color: #CBD5E1;
   text-decoration: none;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.demo-cta-btn {
-  background-color: var(--color-primario, #3B82F6);
-  color: #FFF;
   font-weight: 700;
-  padding: 0.35rem 0.75rem;
-  border-radius: 6px;
-  text-decoration: none;
-  font-size: 0.75rem;
-  white-space: nowrap;
+  font-size: 0.85rem;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  background-color: rgba(11, 15, 25, 0.75);
+  border: 1px solid #1E293B;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
 }
 
-.dashboard-layout {
-  display: flex;
-  min-height: calc(100vh - 40px);
+.nav-pill-btn:hover, .nav-pill-btn.router-link-active {
+  color: var(--color-secundario);
+  border-color: var(--color-secundario);
+  background-color: rgba(0, 163, 255, 0.15);
+  box-shadow: 0 0 12px rgba(0, 163, 255, 0.25);
 }
 
-.sidebar {
-  width: 250px;
+.content-body { flex-grow: 1; }
+
+/* Modal Admin */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background-color: rgba(7, 10, 19, 0.85);
+  backdrop-filter: blur(5px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200;
+}
+
+.login-card {
   background-color: #0B0F19;
-  border-right: 1px solid #1E293B;
-  padding: 1.25rem;
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
+  border: 1px solid var(--color-primario);
+  border-radius: 12px; padding: 1.75rem;
+  width: 90%; max-width: 400px;
+  box-shadow: 0 10px 30px rgba(0, 130, 251, 0.25);
 }
 
-.brand-box { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; }
-.brand-logo { font-size: 1.6rem; }
-.brand-box h2 { font-size: 1.1rem; color: var(--color-primario, #3B82F6); }
-.brand-box small { color: #64748B; font-size: 0.72rem; }
+.login-card h3 { color: #FFF; margin-bottom: 0.5rem; font-size: 1.2rem; }
+.login-card p { color: #94A3B8; font-size: 0.85rem; margin-bottom: 1.25rem; }
 
-.sidebar-nav { display: flex; flex-direction: column; gap: 0.4rem; flex-grow: 1; }
-.nav-item { color: #94A3B8; padding: 0.65rem 0.85rem; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.85rem; transition: all 0.2s; }
-.nav-item.router-link-active, .nav-item:hover { background-color: rgba(59, 130, 246, 0.1); color: var(--color-primario, #3B82F6); }
+.auth-input {
+  width: 100%; padding: 0.75rem;
+  background-color: #070A13; border: 1px solid #1E293B;
+  border-radius: 8px; color: #FFF; font-size: 0.9rem; margin-bottom: 0.75rem;
+}
 
-.user-badge { display: flex; align-items: center; gap: 0.75rem; padding-top: 1rem; border-top: 1px solid #1E293B; }
-.avatar { background-color: var(--color-primario, #3B82F6); color: #FFF; font-weight: 800; font-size: 0.6rem; padding: 0.4rem 0.5rem; border-radius: 50%; }
-.user-info p { font-size: 0.8rem; font-weight: 700; color: #FFF; }
-.user-info small { color: #64748B; font-size: 0.7rem; }
+.auth-input:focus { outline: none; border-color: var(--color-secundario); }
+.auth-error { color: var(--color-fucsia); font-size: 0.8rem; margin-bottom: 0.75rem; }
 
-.main-wrapper { flex-grow: 1; display: flex; flex-direction: column; min-width: 0; }
-.topbar { background-color: #0B0F19; border-bottom: 1px solid #1E293B; padding: 0.85rem 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; }
-.topbar h3 { font-size: 1rem; color: #FFF; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 0.75rem; }
+.btn-cancel { background: transparent; border: 1px solid #1E293B; color: #94A3B8; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; }
+.btn-login { background: var(--color-primario); border: none; color: #FFF; font-weight: 700; padding: 0.5rem 1.25rem; border-radius: 6px; cursor: pointer; }
 
-.topbar-actions { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
-.btn-toggle-view { background-color: rgba(59, 130, 246, 0.15); color: #60A5FA; border: 1px solid #3B82F6; padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; text-decoration: none; transition: all 0.2s; }
-.btn-toggle-view:hover { background-color: #3B82F6; color: #FFF; }
-.btn-toggle-view.admin-mode { background-color: rgba(245, 158, 11, 0.15); color: #F59E0B; border-color: #F59E0B; }
-.status-indicator { font-size: 0.75rem; color: #10B981; }
+/* Botón Flotante WhatsApp */
+.whatsapp-float-btn {
+  position: fixed; bottom: 20px; right: 20px;
+  width: 52px; height: 52px; background-color: #10B981;
+  color: #FFF; border-radius: 50%; display: flex;
+  align-items: center; justify-content: center;
+  font-size: 1.5rem; text-decoration: none;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4); z-index: 99;
+}
 
-.content-body { padding: 1.25rem; background-color: #070A13; flex-grow: 1; min-width: 0; }
+.main-footer {
+  background-color: #0B0F19; border-top: 1px solid #1E293B;
+  padding: 1.25rem; text-align: center; color: #64748B; font-size: 0.82rem;
+}
 
-@media (max-width: 768px) {
-  .dashboard-layout { flex-direction: column; }
-  .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #1E293B; padding: 0.85rem 1rem; }
-  .brand-box { margin-bottom: 0.75rem; }
-  .sidebar-nav { flex-direction: row; overflow-x: auto; padding-bottom: 0.25rem; -webkit-overflow-scrolling: touch; }
-  .nav-item { white-space: nowrap; font-size: 0.8rem; padding: 0.5rem 0.75rem; }
-  .user-badge { display: none; }
-  .content-body { padding: 1rem 0.75rem; }
+.secret-trigger { cursor: pointer; user-select: none; transition: opacity 0.2s; }
+.secret-trigger:hover { opacity: 0.7; }
+
+@media (max-width: 600px) {
+  .top-floating-nav {
+    position: relative;
+    top: 0;
+    right: 0;
+    justify-content: center;
+    padding: 1rem 0 0 0;
+  }
 }
 </style>
