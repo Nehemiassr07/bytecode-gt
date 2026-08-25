@@ -1,15 +1,14 @@
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
+  --text: #9ca3af;
+  --text-h: #f3f4f6;
+  --bg: #000000;
+  --border: #1e293b;
+  --code-bg: #0f172a;
   --accent: #aa3bff;
   --accent-bg: rgba(170, 59, 255, 0.1);
   --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  --social-bg: rgba(15, 23, 42, 0.5);
+  --shadow: rgba(0, 0, 0, 0.5) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
 
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
   --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
@@ -17,9 +16,9 @@
 
   font: 18px/145% var(--sans);
   letter-spacing: 0.18px;
-  color-scheme: light dark;
+  color-scheme: dark;
   color: var(--text);
-  background: var(--bg);
+  background: #000000 !important;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -34,9 +33,9 @@
   :root {
     --text: #9ca3af;
     --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
+    --bg: #000000;
+    --border: #1e293b;
+    --code-bg: #0f172a;
     --accent: #c084fc;
     --accent-bg: rgba(192, 132, 252, 0.15);
     --accent-border: rgba(192, 132, 252, 0.5);
@@ -52,6 +51,7 @@
 
 body {
   margin: 0;
+  background-color: #000000 !important;
 }
 
 h1,
@@ -157,12 +157,12 @@ code {
 }
 
 #app {
-  width: 1126px;
+  width: 100%;
   max-width: 100%;
   margin: 0 auto;
   text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
+  border-inline: none;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -293,4 +293,43 @@ code {
     right: 0;
     border-right-color: var(--border);
   }
+}
+
+/* Forzar fondo negro en absolutamente todas las capas de las vistas */
+html,
+body,
+#app,
+div[class*='view'],
+div[class*='container'],
+main {
+  background-color: #000000 !important;
+  background: #000000 !important;
+}
+
+/* Forzar fondo negro puro en todos los contenedores y wrappers */
+html,
+body,
+#app,
+header,
+footer,
+main,
+section,
+nav,
+div,
+.tienda-view,
+.admin-view,
+.main-header,
+.main-footer,
+.footer-container,
+.hero-section,
+.catalog-container,
+.legal-page-container {
+  background-color: #000000 !important;
+  background: #000000 !important;
+}
+
+/* Ajuste específico para el Footer y Header */
+.main-footer,
+.main-header {
+  border-color: #1e293b !important;
 }

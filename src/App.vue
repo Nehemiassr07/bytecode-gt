@@ -73,16 +73,24 @@ function intentarAccesoAdmin() {
       💬
     </a>
 
-    <!-- Footer General -->
-    <footer class="main-footer">
-      <div class="footer-container">
-        <p>
-          <span @click="showLoginModal = true" class="secret-trigger" title="Acceso Administrativo">© 2026 🔒</span>
-          <strong>BYTECODEGT</strong>. Cómputo, Redes & Video Vigilancia.
-        </p>
-      </div>
-    </footer>
+  <!-- Footer General -->
+<footer class="main-footer">
+  <div class="footer-container">
+    <div class="footer-info">
+      <p>
+        <span @click="showLoginModal = true" class="secret-trigger" title="Acceso Administrativo">© 2026 🔒</span>
+        <strong>BYTECODEGT</strong>. Cómputo, Redes & Video Vigilancia.
+      </p>
+    </div>
+
+    <div class="footer-legal-col">
+      <span class="footer-title">LEGAL</span>
+      <router-link to="/terms" class="legal-link">Terms of Service</router-link>
+      <router-link to="/privacy" class="legal-link">Privacy Policy</router-link>
+    </div>
   </div>
+</footer>
+</div>
 </template>
 
 <style>
@@ -195,8 +203,58 @@ body {
 }
 
 .main-footer {
-  background-color: #0B0F19; border-top: 1px solid #1E293B;
-  padding: 1.25rem; text-align: center; color: #64748B; font-size: 0.82rem;
+  background: #0b1120;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 1.5rem 0;
+  margin-top: auto;
+}
+
+.footer-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.footer-info p {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.secret-trigger {
+  cursor: pointer;
+  user-select: none;
+  margin-right: 0.35rem;
+}
+
+.footer-legal-col {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.footer-title {
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.legal-link {
+  color: #94a3b8;
+  text-decoration: none;
+  font-size: 0.875rem;
+  transition: color 0.2s ease;
+}
+
+.legal-link:hover {
+  color: #38bdf8;
 }
 
 .secret-trigger { cursor: pointer; user-select: none; transition: opacity 0.2s; }

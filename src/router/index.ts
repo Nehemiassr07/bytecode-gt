@@ -17,6 +17,16 @@ const router = createRouter({
       path: '/admin',
       name: 'admin',
       component: () => import('../views/AdminView.vue') // Panel Administrativo (CRUD & Órdenes)
+    },
+    {
+      path: '/terms',
+      name: 'terms',
+      component: () => import('../views/TermsView.vue') // Términos de Servicio
+    },
+    {
+      path: '/privacy',
+      name: 'privacy',
+      component: () => import('../views/PrivacyView.vue') // Política de Privacidad
     }
   ],
   scrollBehavior() {

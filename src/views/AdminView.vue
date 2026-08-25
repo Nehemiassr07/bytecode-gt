@@ -51,6 +51,7 @@ const cargandoProductos = ref(false)
 const modalProductoOpen = ref(false)
 const modoEdicion = ref(false)
 const guardarCargando = ref(false)
+const subiendoImagen = ref(false)
 
 const productoForm = ref<Producto>({
   sku: '',
@@ -123,12 +124,10 @@ async function enviarNotificacionCorreo(orden: Orden) {
     return
   }
 
-  // Lectura segura desde variables de entorno
   const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID
   const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID
   const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY
 
-  // Validar presencia de credenciales antes de ejecutar
   if (!serviceId || !templateId || !publicKey) {
     console.error('❌ Faltan las variables de entorno de EmailJS.')
     alert('⚠️ Error de configuración: No se encontraron las llaves de EmailJS en el entorno.')
@@ -158,6 +157,7 @@ async function enviarNotificacionCorreo(orden: Orden) {
     alert(`⚠️ No se pudo enviar el correo (${error?.status || 404}): ${error?.text || 'Error de envío'}`)
   }
 }
+
 async function guardarGuiaLogistica(orden: Orden) {
   if (!orden.empresa_logistica || !orden.guia_envio) {
     alert('Por favor ingresa tanto la Empresa de Logística como el Número de Guía.')
@@ -254,6 +254,36 @@ function editarProducto(p: Producto) {
   modalProductoOpen.value = true
 }
 
+async function handleSubirImagen(e: Event) {
+  const target = e.target as HTMLInputElement
+  if (!target.files || target.files.length === 0) return
+
+  const file = target.files[0]
+  const sku = productoForm.value.sku ? productoForm.value.sku.trim() : 'producto'
+  const fileExt = file.name.split('.').pop()
+  const fileName = `${sku.toLowerCase()}-${Date.now()}.${fileExt}`
+
+  subiendoImagen.value = true
+  try {
+    const { error: uploadError } = await supabase.storage
+      .from('productos')
+      .upload(fileName, file, { upsert: true })
+
+    if (uploadError) throw uploadError
+
+    const { data } = supabase.storage
+      .from('productos')
+      .getPublicUrl(fileName)
+
+    productoForm.value.imagenes = [data.publicUrl]
+  } catch (err: any) {
+    console.error('❌ Error al subir imagen:', err)
+    alert(`Error al subir la imagen: ${err.message || 'Verifica que el bucket "productos" sea público en Supabase'}`)
+  } finally {
+    subiendoImagen.value = false
+  }
+}
+
 async function guardarProducto() {
   if (!productoForm.value.nombre || productoForm.value.precio <= 0) {
     alert('Ingresa un nombre válido y un precio mayor a 0.')
@@ -263,17 +293,20 @@ async function guardarProducto() {
   guardarCargando.value = true
   try {
     if (modoEdicion.value && productoForm.value.id) {
-      await supabase.from('productos').update({
+      const { error } = await supabase.from('productos').update({
         sku: productoForm.value.sku,
         nombre: productoForm.value.nombre,
         descripcion: productoForm.value.descripcion,
         precio: productoForm.value.precio,
         stock: productoForm.value.stock,
         categoria_slug: productoForm.value.categoria_slug,
+        imagenes: productoForm.value.imagenes,
         activo: productoForm.value.activo
       }).eq('id', productoForm.value.id)
+
+      if (error) throw error
     } else {
-      await supabase.from('productos').insert([{
+      const { error } = await supabase.from('productos').insert([{
         sku: productoForm.value.sku,
         nombre: productoForm.value.nombre,
         descripcion: productoForm.value.descripcion,
@@ -283,12 +316,16 @@ async function guardarProducto() {
         imagenes: productoForm.value.imagenes,
         activo: productoForm.value.activo
       }])
+
+      if (error) throw error
     }
 
     modalProductoOpen.value = false
     await cargarProductos()
-  } catch (err) {
+    alert('✅ Producto guardado exitosamente.')
+  } catch (err: any) {
     console.error('Error guardando producto:', err)
+    alert(`⚠️ No se pudo guardar: ${err.message || 'Error en la base de datos'}`)
   } finally {
     guardarCargando.value = false
   }
@@ -577,13 +614,29 @@ function cerrarSesion() {
           </div>
 
           <div class="form-group">
-            <label>URL de Imagen Principal</label>
-            <input type="text" v-model="productoForm.imagenes[0]" placeholder="https://..." />
+            <label>Imagen del Producto (Subir archivo)</label>
+            <input 
+              type="file" 
+              accept="image/*" 
+              @change="handleSubirImagen" 
+              :disabled="subiendoImagen" 
+            />
+            <small v-if="subiendoImagen" style="color: #38bdf8; display: block; margin-top: 0.2rem;">
+              Subiendo archivo a Supabase Storage...
+            </small>
+
+            <div v-if="productoForm.imagenes && productoForm.imagenes[0]" style="margin-top: 0.5rem;">
+              <img 
+                :src="productoForm.imagenes[0]" 
+                alt="Vista previa" 
+                style="max-height: 120px; border-radius: 8px; border: 1px solid #1E293B; object-fit: cover;" 
+              />
+            </div>
           </div>
 
           <div class="modal-actions">
             <button type="button" @click="modalProductoOpen = false" class="btn-cancel">Cancelar</button>
-            <button type="submit" class="btn-save" :disabled="guardarCargando">
+            <button type="submit" class="btn-save" :disabled="guardarCargando || subiendoImagen">
               {{ guardarCargando ? 'Guardando...' : 'Guardar Producto' }}
             </button>
           </div>
@@ -647,7 +700,6 @@ function cerrarSesion() {
 .code-highlight { color: #00A3FF; font-weight: 800; }
 .price-cell { font-weight: 800; color: #FFF; white-space: nowrap; }
 
-/* Estilos Corregidos para la casilla de Pago */
 .badge-payment {
   background: #070A13;
   padding: 0.35rem 0.65rem;
