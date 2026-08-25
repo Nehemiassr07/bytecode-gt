@@ -477,7 +477,7 @@ function handleFileUpload(e: Event) {
               📄 Descargar Cotización PDF
             </button>
             <button class="btn-checkout" @click="checkoutOpen = true">
-              ⚡ Procesar Orden
+               Procesar Orden
             </button>
           </div>
         </div>
@@ -540,7 +540,7 @@ function handleFileUpload(e: Event) {
           <div class="checkout-actions">
             <button type="button" @click="checkoutOpen = false" class="btn-cancel">Cancelar</button>
             <button type="submit" class="btn-confirm" :disabled="procesandoOrden">
-              {{ procesandoOrden ? 'Procesando...' : 'Confirmar Orden por WhatsApp 🚀' }}
+              {{ procesandoOrden ? 'Procesando...' : 'Confirmar Orden por WhatsApp ' }}
             </button>
           </div>
         </form>
@@ -562,15 +562,16 @@ function handleFileUpload(e: Event) {
         </div>
 
         <div class="success-actions">
-          <a 
-            :href="ordenCreadaUrlWa" 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            class="btn-wa-final"
-            @click="ordenCreadaModal = false"
-          >
-            💬 Continuar por WhatsApp 🚀
-          </a>
+         <a 
+  :href="ordenCreadaUrlWa" 
+  target="_blank" 
+  rel="noopener noreferrer" 
+  class="btn-wa-final"
+  style="text-decoration: none;"
+  @click="ordenCreadaModal = false"
+>
+  💬 Continuar por WhatsApp 
+</a>
         </div>
       </div>
     </div>

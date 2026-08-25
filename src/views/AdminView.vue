@@ -123,10 +123,17 @@ async function enviarNotificacionCorreo(orden: Orden) {
     return
   }
 
-  // Se corrige la 'l' minúscula en el fallback de la Public Key
-  const serviceId = (import.meta.env.VITE_EMAILJS_SERVICE_ID || 'service_5dzn2l4').trim()
-  const templateId = (import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'template_zieyd1s').trim()
-  const publicKey = (import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'PhFAz0KVqlu9WuUX9').trim()
+  // Lectura segura desde variables de entorno
+  const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID
+  const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID
+  const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+
+  // Validar presencia de credenciales antes de ejecutar
+  if (!serviceId || !templateId || !publicKey) {
+    console.error('❌ Faltan las variables de entorno de EmailJS.')
+    alert('⚠️ Error de configuración: No se encontraron las llaves de EmailJS en el entorno.')
+    return
+  }
 
   const templateParams = {
     to_email: orden.cliente_email,
@@ -138,18 +145,17 @@ async function enviarNotificacionCorreo(orden: Orden) {
   }
 
   try {
-    // Inicializar EmailJS con la clave pública antes de enviar
     emailjs.init({ publicKey })
 
     const response = await emailjs.send(serviceId, templateId, templateParams, {
       publicKey
     })
 
-    console.log('✅ Correo de notificación enviado a:', orden.cliente_email, response.status, response.text)
+    console.log('✅ Correo enviado a:', orden.cliente_email, response.status, response.text)
     alert(`✅ Correo enviado exitosamente a: ${orden.cliente_email}`)
   } catch (error: any) {
     console.error('❌ Error enviando correo vía EmailJS:', error)
-    alert(`⚠️ No se pudo enviar el correo (${error?.status || 404}): ${error?.text || 'Account not found'}`)
+    alert(`⚠️ No se pudo enviar el correo (${error?.status || 404}): ${error?.text || 'Error de envío'}`)
   }
 }
 async function guardarGuiaLogistica(orden: Orden) {
