@@ -214,10 +214,14 @@ function generarCotizacionPDF() {
     setTimeout(() => { contenidoWindow.print() }, 250)
   }
 }
-
 async function procesarPedido() {
-  if (!datosCliente.value.nombre || !datosCliente.value.telefono || !datosCliente.value.direccion) {
-    alert('Por favor completa tu Nombre, Teléfono y Dirección de entrega.')
+  if (
+    !datosCliente.value.nombre || 
+    !datosCliente.value.telefono || 
+    !datosCliente.value.direccion || 
+    !datosCliente.value.email
+  ) {
+    alert('Por favor completa todos los campos obligatorios, incluyendo tu Correo Electrónico.')
     return
   }
 
@@ -248,7 +252,7 @@ async function procesarPedido() {
       codigo_orden: codigoOrden,
       cliente_nombre: datosCliente.value.nombre,
       cliente_telefono: datosCliente.value.telefono,
-      cliente_email: datosCliente.value.email || '',
+      cliente_email: datosCliente.value.email,
       direccion: datosCliente.value.direccion,
       departamento: datosCliente.value.departamento,
       municipio: datosCliente.value.municipio,
@@ -264,6 +268,7 @@ async function procesarPedido() {
     let msj = `Hola BytecodeGt! He realizado la Orden *${codigoOrden}*\n\n` +
               `*Cliente:* ${datosCliente.value.nombre}\n` +
               `*Teléfono:* ${datosCliente.value.telefono}\n` +
+              `*Correo:* ${datosCliente.value.email}\n` +
               `*Dirección:* ${datosCliente.value.direccion}, ${datosCliente.value.municipio}\n` +
               `*Pago:* ${metodoPago.value === 'contra_entrega' ? 'Pago Contra Entrega' : 'Transferencia Bancaria'}\n\n` +
               `*Productos:* \n${productosTexto}\n\n` +
@@ -485,67 +490,67 @@ function handleFileUpload(e: Event) {
     </div>
 
     <!-- Modal Checkout -->
-    <div v-if="checkoutOpen" class="modal-backdrop" @click.self="checkoutOpen = false">
-      <div class="checkout-card">
-        <h2>Confirmación y Entrega</h2>
-        <p class="subtitle">Ingresa tus datos para procesar el despacho</p>
+<div v-if="checkoutOpen" class="modal-backdrop" @click.self="checkoutOpen = false">
+  <div class="checkout-card">
+    <h2>Confirmación y Entrega</h2>
+    <p class="subtitle">Ingresa tus datos para procesar el despacho</p>
 
-        <form @submit.prevent="procesarPedido" class="checkout-form">
-          <div class="form-group">
-            <label>Nombre Completo *</label>
-            <input type="text" v-model="datosCliente.nombre" required placeholder="Ej. Juan Pérez" />
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Teléfono WhatsApp *</label>
-              <input type="tel" v-model="datosCliente.telefono" required placeholder="Ej. 55554444" />
-            </div>
-            <div class="form-group">
-              <label>Correo Electrónico</label>
-              <input type="email" v-model="datosCliente.email" placeholder="cliente@correo.com" />
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>Dirección Exacta de Entrega *</label>
-            <input type="text" v-model="datosCliente.direccion" required placeholder="Calle, avenida, zona, número de casa" />
-          </div>
-
-          <div class="form-group">
-            <label>Método de Pago *</label>
-            <div class="payment-options">
-              <label :class="{ active: metodoPago === 'contra_entrega' }">
-                <input type="radio" value="contra_entrega" v-model="metodoPago" />
-                💵 Pago Contra Entrega
-              </label>
-              <label :class="{ active: metodoPago === 'transferencia' }">
-                <input type="radio" value="transferencia" v-model="metodoPago" />
-                🏦 Transferencia / Depósito
-              </label>
-            </div>
-          </div>
-
-          <div v-if="metodoPago === 'transferencia'" class="bank-details-box">
-            <p><strong>Cuentas Bancarias para Depósito:</strong></p>
-            <small>Banrural Monetaria: 3000-123456-7 (BytecodeGt)</small><br>
-            <small>BI Monetaria: 001-987654-2 (BytecodeGt)</small>
-
-            <div class="form-group mt-2">
-              <label>Adjuntar Comprobante (Imagen/PDF)</label>
-              <input type="file" @change="handleFileUpload" accept="image/*,application/pdf" />
-            </div>
-          </div>
-
-          <div class="checkout-actions">
-            <button type="button" @click="checkoutOpen = false" class="btn-cancel">Cancelar</button>
-            <button type="submit" class="btn-confirm" :disabled="procesandoOrden">
-              {{ procesandoOrden ? 'Procesando...' : 'Confirmar Orden por WhatsApp 🚀' }}
-            </button>
-          </div>
-        </form>
+    <form @submit.prevent="procesarPedido" class="checkout-form">
+      <div class="form-group">
+        <label>Nombre Completo *</label>
+        <input type="text" v-model="datosCliente.nombre" required placeholder="Ej. Juan Pérez" />
       </div>
-    </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Teléfono WhatsApp *</label>
+          <input type="tel" v-model="datosCliente.telefono" required placeholder="Ej. 55554444" />
+        </div>
+        <div class="form-group">
+          <label>Correo Electrónico *</label>
+          <input type="email" v-model="datosCliente.email" required placeholder="cliente@correo.com" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Dirección Exacta de Entrega *</label>
+        <input type="text" v-model="datosCliente.direccion" required placeholder="Calle, avenida, zona, número de casa" />
+      </div>
+
+      <div class="form-group">
+        <label>Método de Pago *</label>
+        <div class="payment-options">
+          <label :class="{ active: metodoPago === 'contra_entrega' }">
+            <input type="radio" value="contra_entrega" v-model="metodoPago" />
+            💵 Pago Contra Entrega
+          </label>
+          <label :class="{ active: metodoPago === 'transferencia' }">
+            <input type="radio" value="transferencia" v-model="metodoPago" />
+            🏦 Transferencia / Depósito
+          </label>
+        </div>
+      </div>
+
+      <div v-if="metodoPago === 'transferencia'" class="bank-details-box">
+        <p><strong>Cuentas Bancarias para Depósito:</strong></p>
+        <small>Banrural Monetaria: 3000-123456-7 (BytecodeGt)</small><br>
+        <small>BI Monetaria: 001-987654-2 (BytecodeGt)</small>
+
+        <div class="form-group mt-2">
+          <label>Adjuntar Comprobante (Imagen/PDF)</label>
+          <input type="file" @change="handleFileUpload" accept="image/*,application/pdf" />
+        </div>
+      </div>
+
+      <div class="checkout-actions">
+        <button type="button" @click="checkoutOpen = false" class="btn-cancel">Cancelar</button>
+        <button type="submit" class="btn-confirm" :disabled="procesandoOrden">
+          {{ procesandoOrden ? 'Procesando...' : 'Confirmar Orden por WhatsApp 🚀' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
 
     <!-- Modal Confirmación de Orden Creada + Copiar Código (Mejora 3) -->
     <div v-if="ordenCreadaModal" class="modal-backdrop">
