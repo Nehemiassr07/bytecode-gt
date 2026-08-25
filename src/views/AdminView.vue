@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '../lib/supabaseClient'
+import emailjs from '@emailjs/browser'
 
 interface Orden {
   id: string
@@ -117,42 +118,32 @@ async function actualizarEstadoOrden(ordenId: string, nuevoEstado: string) {
 }
 
 async function enviarNotificacionCorreo(orden: Orden) {
-  if (!orden.cliente_email) return
+  if (!orden.cliente_email) {
+    console.warn('El cliente no tiene un correo electrónico registrado.')
+    return
+  }
 
-  // Valores de respaldo para evitar 'undefined' en las peticiones HTTP
-  const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID || 'service_5dzn2l4'
-  const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'template_zieyd1s'
-  const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'PhFAz0KVqIu9WuUX9'
+  const serviceId = (import.meta.env.VITE_EMAILJS_SERVICE_ID || 'service_5dzn2l4').trim()
+  const templateId = (import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'template_zieyd1s').trim()
+  const publicKey = (import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'PhFAz0KVqIu9WuUX9').trim()
+
+  const templateParams = {
+    to_email: orden.cliente_email,
+    to_name: orden.cliente_nombre,
+    codigo_orden: orden.codigo_orden,
+    empresa_logistica: orden.empresa_logistica || 'Transporte Local',
+    guia_envio: orden.guia_envio || 'N/A',
+    total: `Q${Number(orden.total).toFixed(2)}`
+  }
 
   try {
-    const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        service_id: serviceId,
-        template_id: templateId,
-        user_id: publicKey,
-        template_params: {
-          to_email: orden.cliente_email,
-          to_name: orden.cliente_nombre,
-          codigo_orden: orden.codigo_orden,
-          empresa_logistica: orden.empresa_logistica || 'Transporte Local',
-          guia_envio: orden.guia_envio || 'N/A',
-          total: `Q${Number(orden.total).toFixed(2)}`
-        }
-      })
-    })
-
-    if (response.ok) {
-      console.log('✅ Correo de notificación enviado a:', orden.cliente_email)
-    } else {
-      console.warn('⚠️ Error enviando correo vía EmailJS:', await response.text())
-    }
-  } catch (err) {
-    console.error('❌ Error de red en EmailJS:', err)
+    const response = await emailjs.send(serviceId, templateId, templateParams, publicKey)
+    console.log('✅ Correo de notificación enviado a:', orden.cliente_email, response.status, response.text)
+  } catch (error: any) {
+    console.error('❌ Error enviando correo vía EmailJS:', error)
+    alert(`⚠️ No se pudo enviar el correo (${error?.status || 'Error'}): ${error?.text || 'Verifica que la plantilla esté guardada en EmailJS'}`)
   }
 }
-
 async function guardarGuiaLogistica(orden: Orden) {
   if (!orden.empresa_logistica || !orden.guia_envio) {
     alert('Por favor ingresa tanto la Empresa de Logística como el Número de Guía.')
