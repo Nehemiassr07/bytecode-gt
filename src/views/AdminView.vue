@@ -396,6 +396,34 @@ function abrirComprobante(path: string) {
     modalFotoUrl.value = data.publicUrl
   }
 }
+
+const eliminandoOrdenes = ref(false)
+
+async function vaciarTodosLosPedidos() {
+  if (ordenes.value.length === 0) {
+    alert('No hay pedidos registrados para eliminar.')
+    return
+  }
+
+  const confirmacion = confirm('⚠️ ¿Estás seguro de que deseas eliminar TODOS los pedidos del sistema?\n\nEsta acción es irreversible y borrará el historial de ventas.')
+  if (!confirmacion) return
+
+  eliminandoOrdenes.value = true
+  try {
+    // Elimina todos los registros de la tabla 'ordenes'
+    const { error } = await supabase.from('ordenes').delete().not('id', 'is', null)
+
+    if (error) throw error
+
+    alert('✅ Se han eliminado todos los pedidos del sistema correctamente.')
+    await cargarOrdenes()
+  } catch (err: any) {
+    console.error('Error eliminando pedidos:', err)
+    alert(`⚠️ Error al eliminar pedidos: ${err.message || 'Verifica los permisos RLS en Supabase'}`)
+  } finally {
+    eliminandoOrdenes.value = false
+  }
+}
 </script>
 
 <template>
@@ -485,6 +513,9 @@ function abrirComprobante(path: string) {
               <div class="action-buttons-group">
                 <button @click="exportarCSV" class="btn-export">📊 Exportar Reporte CSV</button>
                 <button @click="cargarOrdenes" class="btn-refresh">🔄 Actualizar</button>
+                <button @click="vaciarTodosLosPedidos" class="btn-clear-orders" :disabled="eliminandoOrdenes">
+                  {{ eliminandoOrdenes ? '⌛ Eliminando...' : '🗑️ Limpiar Pedidos' }}
+                </button>
               </div>
             </div>
 
@@ -856,6 +887,54 @@ function abrirComprobante(path: string) {
 .email-subtext { display: block; color: #64748B; font-size: 0.75rem; }
 .code-highlight { color: #00A3FF; font-weight: 800; }
 .price-cell { font-weight: 800; color: #FFF; white-space: nowrap; }
+
+/* Grupo de botones flexible para móviles */
+.action-buttons-group {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Botón de Limpiar Pedidos */
+.btn-clear-orders {
+  background: rgba(255, 0, 127, 0.15);
+  border: 1px solid #FF007F;
+  color: #FF007F;
+  padding: 0.45rem 0.85rem;
+  border-radius: 6px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-clear-orders:hover:not(:disabled) {
+  background: rgba(255, 0, 127, 0.3);
+  box-shadow: 0 0 10px rgba(255, 0, 127, 0.3);
+}
+
+.btn-clear-orders:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Adaptación responsiva adicional */
+@media (max-width: 600px) {
+  .section-title {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .action-buttons-group {
+    width: 100%;
+  }
+
+  .action-buttons-group button {
+    flex: 1 1 auto;
+    text-align: center;
+    justify-content: center;
+  }
+}
 
 .badge-payment {
   background: #070A13;
