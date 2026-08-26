@@ -22,7 +22,7 @@ export interface SiteConfig {
 export const siteConfig: SiteConfig = {
   nombreEmpresa: "BYTECODE GT",
   eslogan: "Cómputo, Redes & Videovigilancia",
-  whatsapp: "50231154903", // Cambia por el número receptor de pedidos
+  whatsapp: "50242049658", // Cambia por el número receptor de pedidos
   colores: {
     primario: "#0082FB",
     secundario: "#00A3FF",
