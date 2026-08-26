@@ -1,24 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { RouterLink, RouterView, useRouter } from 'vue-router'
+import { RouterLink, RouterView } from 'vue-router'
 import { siteConfig } from './config/siteConfig'
-
-const router = useRouter()
-const showLoginModal = ref(false)
-const adminPassword = ref('')
-const loginError = ref('')
-
-function intentarAccesoAdmin() {
-  loginError.value = ''
-  if (adminPassword.value === 'bytecode2026') {
-    showLoginModal.value = false
-    adminPassword.value = ''
-    sessionStorage.setItem('bytecode_admin_auth', 'true')
-    router.push('/admin')
-  } else {
-    loginError.value = 'Contraseña incorrecta'
-  }
-}
 </script>
 
 <template>
@@ -27,7 +9,7 @@ function intentarAccesoAdmin() {
     '--color-secundario': siteConfig.colores.secundario,
     '--color-fucsia': siteConfig.colores.acentoFucsia
   }">
-    <!-- Navegación Flotante Minimalista (Sin Barra Superior Oscura ni Línea Azul) -->
+    <!-- Navegación Flotante Minimalista -->
     <nav class="top-floating-nav">
       <RouterLink to="/" class="nav-pill-btn">🛍️ Catálogo</RouterLink>
       <RouterLink to="/rastreo" class="nav-pill-btn">📦 Rastrear Pedido</RouterLink>
@@ -37,30 +19,6 @@ function intentarAccesoAdmin() {
     <main class="content-body">
       <RouterView />
     </main>
-
-    <!-- Modal Admin Oculto -->
-    <div v-if="showLoginModal" class="modal-backdrop" @click.self="showLoginModal = false">
-      <div class="login-card">
-        <h3>🔒 Acceso Restringido</h3>
-        <p>Introduce la clave de administración de BytecodeGt:</p>
-
-        <form @submit.prevent="intentarAccesoAdmin">
-          <input 
-            type="password" 
-            v-model="adminPassword" 
-            placeholder="Contraseña de administrador" 
-            class="auth-input"
-            autofocus 
-          />
-          <p v-if="loginError" class="auth-error">{{ loginError }}</p>
-
-          <div class="modal-actions">
-            <button type="button" @click="showLoginModal = false" class="btn-cancel">Cancelar</button>
-            <button type="submit" class="btn-login">Ingresar</button>
-          </div>
-        </form>
-      </div>
-    </div>
 
     <!-- Widget Flotante WhatsApp -->
     <a 
@@ -73,24 +31,24 @@ function intentarAccesoAdmin() {
       💬
     </a>
 
-  <!-- Footer General -->
-<footer class="main-footer">
-  <div class="footer-container">
-    <div class="footer-info">
-      <p>
-        <span @click="showLoginModal = true" class="secret-trigger" title="Acceso Administrativo">© 2026 🔒</span>
-        <strong>BYTECODEGT</strong>. Cómputo, Redes & Video Vigilancia.
-      </p>
-    </div>
+    <!-- Footer General -->
+    <footer class="main-footer">
+      <div class="footer-container">
+        <div class="footer-info">
+          <p>
+            <RouterLink to="/admin" class="secret-trigger" title="Acceso Administrativo">© 2026 🔒</RouterLink>
+            <strong>BYTECODEGT</strong>. Cómputo, Redes & Video Vigilancia.
+          </p>
+        </div>
 
-    <div class="footer-legal-col">
-      <span class="footer-title">LEGAL</span>
-      <router-link to="/terms" class="legal-link">Terms of Service</router-link>
-      <router-link to="/privacy" class="legal-link">Privacy Policy</router-link>
-    </div>
+        <div class="footer-legal-col">
+          <span class="footer-title">LEGAL</span>
+          <RouterLink to="/terms" class="legal-link">Terms of Service</RouterLink>
+          <RouterLink to="/privacy" class="legal-link">Privacy Policy</RouterLink>
+        </div>
+      </div>
+    </footer>
   </div>
-</footer>
-</div>
 </template>
 
 <style>
@@ -126,7 +84,7 @@ body {
   position: relative;
 }
 
-/* Botones de Navegación Flotantes (Sin barra bloqueante) */
+/* Botones de Navegación Flotantes */
 .top-floating-nav {
   position: absolute;
   top: 1.25rem;
@@ -159,39 +117,6 @@ body {
 
 .content-body { flex-grow: 1; }
 
-/* Modal Admin */
-.modal-backdrop {
-  position: fixed; inset: 0;
-  background-color: rgba(7, 10, 19, 0.85);
-  backdrop-filter: blur(5px);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 200;
-}
-
-.login-card {
-  background-color: #0B0F19;
-  border: 1px solid var(--color-primario);
-  border-radius: 12px; padding: 1.75rem;
-  width: 90%; max-width: 400px;
-  box-shadow: 0 10px 30px rgba(0, 130, 251, 0.25);
-}
-
-.login-card h3 { color: #FFF; margin-bottom: 0.5rem; font-size: 1.2rem; }
-.login-card p { color: #94A3B8; font-size: 0.85rem; margin-bottom: 1.25rem; }
-
-.auth-input {
-  width: 100%; padding: 0.75rem;
-  background-color: #070A13; border: 1px solid #1E293B;
-  border-radius: 8px; color: #FFF; font-size: 0.9rem; margin-bottom: 0.75rem;
-}
-
-.auth-input:focus { outline: none; border-color: var(--color-secundario); }
-.auth-error { color: var(--color-fucsia); font-size: 0.8rem; margin-bottom: 0.75rem; }
-
-.modal-actions { display: flex; justify-content: flex-end; gap: 0.75rem; }
-.btn-cancel { background: transparent; border: 1px solid #1E293B; color: #94A3B8; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; }
-.btn-login { background: var(--color-primario); border: none; color: #FFF; font-weight: 700; padding: 0.5rem 1.25rem; border-radius: 6px; cursor: pointer; }
-
 /* Botón Flotante WhatsApp */
 .whatsapp-float-btn {
   position: fixed; bottom: 20px; right: 20px;
@@ -202,6 +127,7 @@ body {
   box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4); z-index: 99;
 }
 
+/* Footer General */
 .main-footer {
   background: #0b1120;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
@@ -230,6 +156,13 @@ body {
   cursor: pointer;
   user-select: none;
   margin-right: 0.35rem;
+  text-decoration: none;
+  color: inherit;
+  transition: opacity 0.2s;
+}
+
+.secret-trigger:hover {
+  opacity: 0.7;
 }
 
 .footer-legal-col {
@@ -256,9 +189,6 @@ body {
 .legal-link:hover {
   color: #38bdf8;
 }
-
-.secret-trigger { cursor: pointer; user-select: none; transition: opacity 0.2s; }
-.secret-trigger:hover { opacity: 0.7; }
 
 @media (max-width: 600px) {
   .top-floating-nav {

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { supabase } from '../lib/supabaseClient'
 import emailjs from '@emailjs/browser'
 
@@ -33,8 +32,13 @@ interface Producto {
   activo: boolean
 }
 
-const router = useRouter()
 const tabActiva = ref<'ordenes' | 'productos'>('ordenes')
+
+// Estados de Autenticación con Supabase
+const sesionActiva = ref(false)
+const emailLogin = ref('')
+const passwordLogin = ref('')
+const cargandoLogin = ref(false)
 
 // Estados para Órdenes
 const ordenes = ref<Orden[]>([])
@@ -65,14 +69,47 @@ const productoForm = ref<Producto>({
 })
 
 onMounted(async () => {
-  const auth = sessionStorage.getItem('bytecode_admin_auth')
-  if (!auth) {
-    router.push('/')
+  // Comprobar la sesión activa en Supabase Auth
+  const { data: { session } } = await supabase.auth.getSession()
+  sesionActiva.value = !!session
+
+  if (session) {
+    await cargarOrdenes()
+    await cargarProductos()
+  }
+
+  // Escuchar si la sesión cambia en tiempo real
+  supabase.auth.onAuthStateChange(async (_event, session) => {
+    sesionActiva.value = !!session
+    if (session) {
+      await cargarOrdenes()
+      await cargarProductos()
+    }
+  })
+})
+
+async function iniciarSesion() {
+  if (!emailLogin.value || !passwordLogin.value) {
+    alert('Por favor ingresa correo y contraseña.')
     return
   }
-  await cargarOrdenes()
-  await cargarProductos()
-})
+
+  cargandoLogin.value = true
+  const { error } = await supabase.auth.signInWithPassword({
+    email: emailLogin.value,
+    password: passwordLogin.value
+  })
+  cargandoLogin.value = false
+
+  if (error) {
+    alert('Acceso denegado: Credenciales incorrectas o usuario no registrado.')
+  }
+}
+
+async function cerrarSesion() {
+  await supabase.auth.signOut()
+  sesionActiva.value = false
+}
 
 async function cargarOrdenes() {
   cargandoOrdenes.value = true
@@ -359,300 +396,332 @@ function abrirComprobante(path: string) {
     modalFotoUrl.value = data.publicUrl
   }
 }
-
-function cerrarSesion() {
-  sessionStorage.removeItem('bytecode_admin_auth')
-  router.push('/')
-}
 </script>
 
 <template>
-  <div class="admin-view">
-    <div class="admin-header">
-      <div class="header-titles">
-        <h1>🔒 Panel de Administración - BytecodeGt</h1>
-        <p>Gestión de Pedidos, CRUD de Productos e Inventario</p>
-      </div>
-      <div class="header-actions">
-        <button class="btn-logout" @click="cerrarSesion">Cerrar Sesión</button>
-      </div>
-    </div>
+  <div class="admin-wrapper">
+    <!-- FORMULARIO DE LOGIN (SI NO HAY SESIÓN ACTIVA) -->
+    <div v-if="!sesionActiva" class="login-container">
+      <div class="login-card">
+        <h2>🔒 Panel Administrativo - BytecodeGt</h2>
+        <p>Ingresa tus credenciales registradas en Supabase para acceder</p>
 
-    <div class="admin-container">
-      <div class="tabs-nav">
-        <button 
-          class="tab-btn" 
-          :class="{ active: tabActiva === 'ordenes' }" 
-          @click="tabActiva = 'ordenes'"
-        >
-          📦 Gestión de Pedidos ({{ ordenes.length }})
-        </button>
-        <button 
-          class="tab-btn" 
-          :class="{ active: tabActiva === 'productos' }" 
-          @click="tabActiva = 'productos'"
-        >
-          🏷️ CRUD de Productos ({{ productos.length }})
-        </button>
-      </div>
-
-      <!-- PESTAÑA 1: ÓRDENES -->
-      <div v-if="tabActiva === 'ordenes'" class="tab-content">
-        <div class="stats-row">
-          <div class="stat-card">
-            <h3>Total de Pedidos</h3>
-            <p class="stat-number">{{ ordenes.length }}</p>
-          </div>
-          <div class="stat-card">
-            <h3>Ingresos Generados</h3>
-            <p class="stat-number text-green">
-              Q{{ ordenes.reduce((acc, o) => acc + Number(o.total), 0).toFixed(2) }}
-            </p>
-          </div>
-        </div>
-
-        <div class="orders-section">
-          <div class="section-title">
-            <h2>📦 Registro y Seguimiento de Pedidos</h2>
-            <div class="action-buttons-group">
-              <button @click="exportarCSV" class="btn-export">📊 Exportar Reporte CSV</button>
-              <button @click="cargarOrdenes" class="btn-refresh">🔄 Actualizar</button>
-            </div>
-          </div>
-
-          <div class="filters-bar">
-            <div class="search-box">
-              <input type="text" v-model="busquedaAdmin" placeholder="Buscar por cliente, correo, código ORD- o teléfono..." />
-            </div>
-
-            <div class="filter-select">
-              <label>Estado:</label>
-              <select v-model="filtroEstado">
-                <option value="todos">Todos</option>
-                <option value="Confirmado">Confirmado</option>
-                <option value="Empacado">Empacado</option>
-                <option value="Entregado a agencia">Entregado a agencia</option>
-                <option value="En ruta final">En ruta final</option>
-                <option value="Entregado">Entregado</option>
-              </select>
-            </div>
-
-            <div class="filter-select">
-              <label>Pago:</label>
-              <select v-model="filtroPago">
-                <option value="todos">Todos</option>
-                <option value="contra_entrega">Contra Entrega</option>
-                <option value="transferencia">Transferencia</option>
-              </select>
-            </div>
-          </div>
-
-          <div v-if="cargandoOrdenes" class="loading-box"><p>Cargando pedidos...</p></div>
-          <div v-else-if="ordenesFiltradas.length === 0" class="empty-box"><p>No hay pedidos que coincidan con los filtros.</p></div>
-
-          <div v-else class="table-responsive">
-            <table class="admin-table">
-              <thead>
-                <tr>
-                  <th style="min-width: 110px;">Código</th>
-                  <th style="min-width: 130px;">Cliente</th>
-                  <th style="min-width: 110px;">Contacto</th>
-                  <th style="min-width: 200px;">Dirección</th>
-                  <th style="min-width: 155px;">Pago</th>
-                  <th style="min-width: 110px;">Comprobante</th>
-                  <th style="min-width: 100px;">Total</th>
-                  <th style="min-width: 140px;">Estado</th>
-                  <th style="min-width: 250px;">Asignar Guía / Logística</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="o in ordenesFiltradas" :key="o.id">
-                  <td><strong class="code-highlight">{{ o.codigo_orden }}</strong></td>
-                  <td>
-                    <div><strong>{{ o.cliente_nombre }}</strong></div>
-                    <small v-if="o.cliente_email" class="email-subtext">{{ o.cliente_email }}</small>
-                  </td>
-                  <td>{{ o.cliente_telefono }}</td>
-                  <td>{{ o.direccion }}, {{ o.municipio }}</td>
-                  <td>
-                    <span class="badge-payment">
-                      <span class="badge-icon">{{ o.metodo_pago === 'contra_entrega' ? '💵' : '🏦' }}</span>
-                      <span>{{ o.metodo_pago === 'contra_entrega' ? 'Contra Entrega' : 'Transferencia' }}</span>
-                    </span>
-                  </td>
-                  <td>
-                    <button v-if="o.comprobante_url" @click="abrirComprobante(o.comprobante_url)" class="btn-proof">
-                      🖼️ Ver Foto
-                    </button>
-                    <span v-else class="no-proof">-</span>
-                  </td>
-                  <td class="price-cell">Q{{ Number(o.total).toFixed(2) }}</td>
-                  <td>
-                    <select :value="o.estado" @change="actualizarEstadoOrden(o.id, ($event.target as HTMLSelectElement).value)" class="status-select">
-                      <option value="Confirmado">Confirmado</option>
-                      <option value="Empacado">Empacado</option>
-                      <option value="Entregado a agencia">Entregado a agencia</option>
-                      <option value="En ruta final">En ruta final</option>
-                      <option value="Entregado">Entregado</option>
-                    </select>
-                  </td>
-                  <td>
-                    <div class="tracking-input-group">
-                      <input type="text" v-model="o.empresa_logistica" placeholder="Empresa (ej. Guatex)" class="small-input" />
-                      <input type="text" v-model="o.guia_envio" placeholder="N° Guía" class="small-input" />
-                      <button @click="guardarGuiaLogistica(o)" class="btn-save-mini" :disabled="guardandoGuiaId === o.id">
-                        {{ guardandoGuiaId === o.id ? '⌛' : '💾' }}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- PESTAÑA 2: CRUD DE PRODUCTOS -->
-      <div v-if="tabActiva === 'productos'" class="tab-content">
-        <div class="orders-section">
-          <div class="section-title">
-            <h2>🏷️ Mantenimiento de Catálogo e Inventario</h2>
-            <button @click="abrirCrearProducto" class="btn-add-prod">➕ Nuevo Producto</button>
-          </div>
-
-          <div v-if="cargandoProductos" class="loading-box"><p>Cargando productos...</p></div>
-          <div v-else-if="productos.length === 0" class="empty-box"><p>No hay productos registrados en el catálogo.</p></div>
-
-          <div v-else class="table-responsive">
-            <table class="admin-table">
-              <thead>
-                <tr>
-                  <th>SKU</th>
-                  <th>Producto</th>
-                  <th>Categoría</th>
-                  <th>Precio</th>
-                  <th>Stock</th>
-                  <th>Estado</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="p in productos" :key="p.id">
-                  <td><strong class="code-highlight">{{ p.sku }}</strong></td>
-                  <td><strong>{{ p.nombre }}</strong></td>
-                  <td><span class="cat-tag">{{ p.categoria_slug }}</span></td>
-                  <td class="price-cell">Q{{ Number(p.precio).toFixed(2) }}</td>
-                  <td>
-                    <span :class="['stock-pill', p.stock <= 3 ? 'low-stock' : 'ok-stock']">
-                      {{ p.stock }} un.
-                    </span>
-                  </td>
-                  <td>
-                    <span :class="['status-pill', p.activo ? 'activo' : 'pausado']">
-                      {{ p.activo ? '🟢 Publicado' : '🔴 Pausado' }}
-                    </span>
-                  </td>
-                  <td>
-                    <div class="table-actions">
-                      <button @click="editarProducto(p)" class="btn-edit">✏️ Editar</button>
-                      <button @click="cambiarEstadoProducto(p)" class="btn-toggle">
-                        {{ p.activo ? '⏸️ Pausar' : '▶️ Activar' }}
-                      </button>
-                      <button @click="eliminarProducto(p.id)" class="btn-delete">🗑️</button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal Formulario Producto -->
-    <div v-if="modalProductoOpen" class="modal-backdrop" @click.self="modalProductoOpen = false">
-      <div class="modal-card">
-        <h3>{{ modoEdicion ? '✏️ Editar Producto' : '➕ Crear Nuevo Producto' }}</h3>
-        
-        <form @submit.prevent="guardarProducto" class="prod-form">
-          <div class="form-row">
-            <div class="form-group">
-              <label>SKU / Código *</label>
-              <input type="text" v-model="productoForm.sku" required />
-            </div>
-            <div class="form-group">
-              <label>Categoría *</label>
-              <select v-model="productoForm.categoria_slug" required>
-                <option value="laptops">Equipos de Cómputo</option>
-                <option value="almacenamiento">Almacenamiento</option>
-                <option value="perifericos">Accesorios & Periféricos</option>
-                <option value="redes">Redes & Conectividad</option>
-                <option value="seguridad">Video Vigilancia</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>Nombre del Producto *</label>
-            <input type="text" v-model="productoForm.nombre" required />
-          </div>
-
-          <div class="form-group">
-            <label>Descripción Técnica</label>
-            <textarea v-model="productoForm.descripcion" rows="3"></textarea>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Precio (Q) *</label>
-              <input type="number" step="0.01" v-model="productoForm.precio" required />
-            </div>
-            <div class="form-group">
-              <label>Stock Disponible *</label>
-              <input type="number" v-model="productoForm.stock" required />
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>Imagen del Producto (Subir archivo)</label>
+        <form @submit.prevent="iniciarSesion" class="login-form">
+          <div class="form-group-login">
+            <label>Correo Electrónico</label>
             <input 
-              type="file" 
-              accept="image/*" 
-              @change="handleSubirImagen" 
-              :disabled="subiendoImagen" 
+              v-model="emailLogin" 
+              type="email" 
+              placeholder="admin@bytecodegt.com" 
+              required 
             />
-            <small v-if="subiendoImagen" style="color: #38bdf8; display: block; margin-top: 0.2rem;">
-              Subiendo archivo a Supabase Storage...
-            </small>
-
-            <div v-if="productoForm.imagenes && productoForm.imagenes[0]" style="margin-top: 0.5rem;">
-              <img 
-                :src="productoForm.imagenes[0]" 
-                alt="Vista previa" 
-                style="max-height: 120px; border-radius: 8px; border: 1px solid #1E293B; object-fit: cover;" 
-              />
-            </div>
           </div>
 
-          <div class="modal-actions">
-            <button type="button" @click="modalProductoOpen = false" class="btn-cancel">Cancelar</button>
-            <button type="submit" class="btn-save" :disabled="guardarCargando || subiendoImagen">
-              {{ guardarCargando ? 'Guardando...' : 'Guardar Producto' }}
-            </button>
+          <div class="form-group-login">
+            <label>Contraseña</label>
+            <input 
+              v-model="passwordLogin" 
+              type="password" 
+              placeholder="••••••••" 
+              required 
+            />
           </div>
+
+          <button type="submit" :disabled="cargandoLogin" class="btn-login">
+            {{ cargandoLogin ? 'Verificando...' : 'Iniciar Sesión' }}
+          </button>
         </form>
       </div>
     </div>
 
-    <!-- Modal Comprobante -->
-    <div v-if="modalFotoUrl" class="modal-backdrop" @click.self="modalFotoUrl = null">
-      <div class="proof-modal-card">
-        <div class="modal-head">
-          <h3>🖼️ Comprobante de Depósito</h3>
-          <button @click="modalFotoUrl = null" class="btn-close">✕</button>
+    <!-- PANEL DE ADMINISTRACIÓN COMPLETO (SI SÍ HAY SESIÓN ACTIVA) -->
+    <div v-else class="admin-view">
+      <div class="admin-header">
+        <div class="header-titles">
+          <h1>🔒 Panel de Administración - BytecodeGt</h1>
+          <p>Gestión de Pedidos, CRUD de Productos e Inventario</p>
         </div>
-        <div class="modal-img-container">
-          <img :src="modalFotoUrl" alt="Comprobante" />
+        <div class="header-actions">
+          <button class="btn-logout" @click="cerrarSesion">Cerrar Sesión</button>
+        </div>
+      </div>
+
+      <div class="admin-container">
+        <div class="tabs-nav">
+          <button 
+            class="tab-btn" 
+            :class="{ active: tabActiva === 'ordenes' }" 
+            @click="tabActiva = 'ordenes'"
+          >
+            📦 Gestión de Pedidos ({{ ordenes.length }})
+          </button>
+          <button 
+            class="tab-btn" 
+            :class="{ active: tabActiva === 'productos' }" 
+            @click="tabActiva = 'productos'"
+          >
+            🏷️ CRUD de Productos ({{ productos.length }})
+          </button>
+        </div>
+
+        <!-- PESTAÑA 1: ÓRDENES -->
+        <div v-if="tabActiva === 'ordenes'" class="tab-content">
+          <div class="stats-row">
+            <div class="stat-card">
+              <h3>Total de Pedidos</h3>
+              <p class="stat-number">{{ ordenes.length }}</p>
+            </div>
+            <div class="stat-card">
+              <h3>Ingresos Generados</h3>
+              <p class="stat-number text-green">
+                Q{{ ordenes.reduce((acc, o) => acc + Number(o.total), 0).toFixed(2) }}
+              </p>
+            </div>
+          </div>
+
+          <div class="orders-section">
+            <div class="section-title">
+              <h2>📦 Registro y Seguimiento de Pedidos</h2>
+              <div class="action-buttons-group">
+                <button @click="exportarCSV" class="btn-export">📊 Exportar Reporte CSV</button>
+                <button @click="cargarOrdenes" class="btn-refresh">🔄 Actualizar</button>
+              </div>
+            </div>
+
+            <div class="filters-bar">
+              <div class="search-box">
+                <input type="text" v-model="busquedaAdmin" placeholder="Buscar por cliente, correo, código ORD- o teléfono..." />
+              </div>
+
+              <div class="filter-select">
+                <label>Estado:</label>
+                <select v-model="filtroEstado">
+                  <option value="todos">Todos</option>
+                  <option value="Confirmado">Confirmado</option>
+                  <option value="Empacado">Empacado</option>
+                  <option value="Entregado a agencia">Entregado a agencia</option>
+                  <option value="En ruta final">En ruta final</option>
+                  <option value="Entregado">Entregado</option>
+                </select>
+              </div>
+
+              <div class="filter-select">
+                <label>Pago:</label>
+                <select v-model="filtroPago">
+                  <option value="todos">Todos</option>
+                  <option value="contra_entrega">Contra Entrega</option>
+                  <option value="transferencia">Transferencia</option>
+                </select>
+              </div>
+            </div>
+
+            <div v-if="cargandoOrdenes" class="loading-box"><p>Cargando pedidos...</p></div>
+            <div v-else-if="ordenesFiltradas.length === 0" class="empty-box"><p>No hay pedidos que coincidan con los filtros.</p></div>
+
+            <div v-else class="table-responsive">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th style="min-width: 110px;">Código</th>
+                    <th style="min-width: 130px;">Cliente</th>
+                    <th style="min-width: 110px;">Contacto</th>
+                    <th style="min-width: 200px;">Dirección</th>
+                    <th style="min-width: 155px;">Pago</th>
+                    <th style="min-width: 110px;">Comprobante</th>
+                    <th style="min-width: 100px;">Total</th>
+                    <th style="min-width: 140px;">Estado</th>
+                    <th style="min-width: 250px;">Asignar Guía / Logística</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="o in ordenesFiltradas" :key="o.id">
+                    <td><strong class="code-highlight">{{ o.codigo_orden }}</strong></td>
+                    <td>
+                      <div><strong>{{ o.cliente_nombre }}</strong></div>
+                      <small v-if="o.cliente_email" class="email-subtext">{{ o.cliente_email }}</small>
+                    </td>
+                    <td>{{ o.cliente_telefono }}</td>
+                    <td>{{ o.direccion }}, {{ o.municipio }}</td>
+                    <td>
+                      <span class="badge-payment">
+                        <span class="badge-icon">{{ o.metodo_pago === 'contra_entrega' ? '💵' : '🏦' }}</span>
+                        <span>{{ o.metodo_pago === 'contra_entrega' ? 'Contra Entrega' : 'Transferencia' }}</span>
+                      </span>
+                    </td>
+                    <td>
+                      <button v-if="o.comprobante_url" @click="abrirComprobante(o.comprobante_url)" class="btn-proof">
+                        🖼️ Ver Foto
+                      </button>
+                      <span v-else class="no-proof">-</span>
+                    </td>
+                    <td class="price-cell">Q{{ Number(o.total).toFixed(2) }}</td>
+                    <td>
+                      <select :value="o.estado" @change="actualizarEstadoOrden(o.id, ($event.target as HTMLSelectElement).value)" class="status-select">
+                        <option value="Confirmado">Confirmado</option>
+                        <option value="Empacado">Empacado</option>
+                        <option value="Entregado a agencia">Entregado a agencia</option>
+                        <option value="En ruta final">En ruta final</option>
+                        <option value="Entregado">Entregado</option>
+                      </select>
+                    </td>
+                    <td>
+                      <div class="tracking-input-group">
+                        <input type="text" v-model="o.empresa_logistica" placeholder="Empresa (ej. Guatex)" class="small-input" />
+                        <input type="text" v-model="o.guia_envio" placeholder="N° Guía" class="small-input" />
+                        <button @click="guardarGuiaLogistica(o)" class="btn-save-mini" :disabled="guardandoGuiaId === o.id">
+                          {{ guardandoGuiaId === o.id ? '⌛' : '💾' }}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- PESTAÑA 2: CRUD DE PRODUCTOS -->
+        <div v-if="tabActiva === 'productos'" class="tab-content">
+          <div class="orders-section">
+            <div class="section-title">
+              <h2>🏷️ Mantenimiento de Catálogo e Inventario</h2>
+              <button @click="abrirCrearProducto" class="btn-add-prod">➕ Nuevo Producto</button>
+            </div>
+
+            <div v-if="cargandoProductos" class="loading-box"><p>Cargando productos...</p></div>
+            <div v-else-if="productos.length === 0" class="empty-box"><p>No hay productos registrados en el catálogo.</p></div>
+
+            <div v-else class="table-responsive">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>SKU</th>
+                    <th>Producto</th>
+                    <th>Categoría</th>
+                    <th>Precio</th>
+                    <th>Stock</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="p in productos" :key="p.id">
+                    <td><strong class="code-highlight">{{ p.sku }}</strong></td>
+                    <td><strong>{{ p.nombre }}</strong></td>
+                    <td><span class="cat-tag">{{ p.categoria_slug }}</span></td>
+                    <td class="price-cell">Q{{ Number(p.precio).toFixed(2) }}</td>
+                    <td>
+                      <span :class="['stock-pill', p.stock <= 3 ? 'low-stock' : 'ok-stock']">
+                        {{ p.stock }} un.
+                      </span>
+                    </td>
+                    <td>
+                      <span :class="['status-pill', p.activo ? 'activo' : 'pausado']">
+                        {{ p.activo ? '🟢 Publicado' : '🔴 Pausado' }}
+                      </span>
+                    </td>
+                    <td>
+                      <div class="table-actions">
+                        <button @click="editarProducto(p)" class="btn-edit">✏️ Editar</button>
+                        <button @click="cambiarEstadoProducto(p)" class="btn-toggle">
+                          {{ p.activo ? '⏸️ Pausar' : '▶️ Activar' }}
+                        </button>
+                        <button @click="eliminarProducto(p.id)" class="btn-delete">🗑️</button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Formulario Producto -->
+      <div v-if="modalProductoOpen" class="modal-backdrop" @click.self="modalProductoOpen = false">
+        <div class="modal-card">
+          <h3>{{ modoEdicion ? '✏️ Editar Producto' : '➕ Crear Nuevo Producto' }}</h3>
+          
+          <form @submit.prevent="guardarProducto" class="prod-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label>SKU / Código *</label>
+                <input type="text" v-model="productoForm.sku" required />
+              </div>
+              <div class="form-group">
+                <label>Categoría *</label>
+                <select v-model="productoForm.categoria_slug" required>
+                  <option value="laptops">Equipos de Cómputo</option>
+                  <option value="almacenamiento">Almacenamiento</option>
+                  <option value="perifericos">Accesorios & Periféricos</option>
+                  <option value="redes">Redes & Conectividad</option>
+                  <option value="seguridad">Video Vigilancia</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Nombre del Producto *</label>
+              <input type="text" v-model="productoForm.nombre" required />
+            </div>
+
+            <div class="form-group">
+              <label>Descripción Técnica</label>
+              <textarea v-model="productoForm.descripcion" rows="3"></textarea>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Precio (Q) *</label>
+                <input type="number" step="0.01" v-model="productoForm.precio" required />
+              </div>
+              <div class="form-group">
+                <label>Stock Disponible *</label>
+                <input type="number" v-model="productoForm.stock" required />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Imagen del Producto (Subir archivo)</label>
+              <input 
+                type="file" 
+                accept="image/*" 
+                @change="handleSubirImagen" 
+                :disabled="subiendoImagen" 
+              />
+              <small v-if="subiendoImagen" style="color: #38bdf8; display: block; margin-top: 0.2rem;">
+                Subiendo archivo a Supabase Storage...
+              </small>
+
+              <div v-if="productoForm.imagenes && productoForm.imagenes[0]" style="margin-top: 0.5rem;">
+                <img 
+                  :src="productoForm.imagenes[0]" 
+                  alt="Vista previa" 
+                  style="max-height: 120px; border-radius: 8px; border: 1px solid #1E293B; object-fit: cover;" 
+                />
+              </div>
+            </div>
+
+            <div class="modal-actions">
+              <button type="button" @click="modalProductoOpen = false" class="btn-cancel">Cancelar</button>
+              <button type="submit" class="btn-save" :disabled="guardarCargando || subiendoImagen">
+                {{ guardarCargando ? 'Guardando...' : 'Guardar Producto' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Modal Comprobante -->
+      <div v-if="modalFotoUrl" class="modal-backdrop" @click.self="modalFotoUrl = null">
+        <div class="proof-modal-card">
+          <div class="modal-head">
+            <h3>🖼️ Comprobante de Depósito</h3>
+            <button @click="modalFotoUrl = null" class="btn-close">✕</button>
+          </div>
+          <div class="modal-img-container">
+            <img :src="modalFotoUrl" alt="Comprobante" />
+          </div>
         </div>
       </div>
     </div>
@@ -660,6 +729,94 @@ function cerrarSesion() {
 </template>
 
 <style scoped>
+/* Estilos para Pantalla de Login */
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #070A13;
+  padding: 1.5rem;
+}
+
+.login-card {
+  background: #0B0F19;
+  border: 1px solid #1E293B;
+  border-radius: 12px;
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 420px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.login-card h2 {
+  font-size: 1.35rem;
+  margin-bottom: 0.5rem;
+  color: #FFF;
+}
+
+.login-card p {
+  font-size: 0.85rem;
+  color: #94A3B8;
+  margin-bottom: 2rem;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  text-align: left;
+}
+
+.form-group-login {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.form-group-login label {
+  font-size: 0.8rem;
+  color: #CBD5E1;
+  font-weight: 600;
+}
+
+.form-group-login input {
+  background: #070A13;
+  border: 1px solid #1E293B;
+  color: #FFF;
+  padding: 0.75rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.form-group-login input:focus {
+  outline: none;
+  border-color: #00A3FF;
+}
+
+.btn-login {
+  background: #0082FB;
+  color: #FFF;
+  border: none;
+  padding: 0.85rem;
+  border-radius: 6px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 0.5rem;
+  transition: background 0.2s;
+}
+
+.btn-login:hover:not(:disabled) {
+  background: #006ddb;
+}
+
+.btn-login:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Estilos de Vista de Panel General */
 .admin-view { min-height: 100vh; background: #070A13; color: #F8FAFC; padding: 4rem 1.5rem 2rem 1.5rem; }
 .admin-header { display: flex; justify-content: space-between; align-items: flex-start; max-width: 1250px; margin: 0 auto 1.5rem auto; border-bottom: 1px solid #1E293B; padding-bottom: 1rem; }
 .header-titles h1 { font-size: 1.5rem; color: #FFF; }
